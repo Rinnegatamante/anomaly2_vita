@@ -1215,7 +1215,8 @@ enum MethodIDs {
 	IS_JOYSTICK_PRESENT,
 	IS_TOUCH_PRESENT,
 	GET_SCREEN_X_DENSITY,
-	GET_SCREEN_Y_DENSITY
+	GET_SCREEN_Y_DENSITY,
+	GET_SYSTEM_LANGUAGE
 } MethodIDs;
 
 typedef struct {
@@ -1229,6 +1230,7 @@ static NameToMethodID name_to_method_ids[] = {
 	{ "IsTouchPresent", IS_TOUCH_PRESENT },
 	{ "GetScreenXDensity", GET_SCREEN_X_DENSITY },
 	{ "GetScreenYDensity", GET_SCREEN_Y_DENSITY },
+	{ "GetSystemLanguage", GET_SYSTEM_LANGUAGE },
 };
 
 int GetMethodID(void *env, void *class, const char *name, const char *sig) {
@@ -1313,6 +1315,54 @@ int GetJavaVM(void *env, void **vm) {
 int GetEnv(void *vm, void **env, int r2) {
 	*env = fake_env;
 	return 0;
+}
+
+char lang_id[8];
+void *CallStaticObjectMethodV(void *env, void *obj, int methodID, uintptr_t *args) {
+	static char r[512];
+	int lang = -1;
+	switch (methodID) {
+	case GET_SYSTEM_LANGUAGE:
+		sceAppUtilSystemParamGetInt(SCE_SYSTEM_PARAM_ID_LANG, &lang);
+		switch (lang) {
+		case SCE_SYSTEM_PARAM_LANG_JAPANESE:
+			sprintf(lang_id, "ja");
+			break;
+		case SCE_SYSTEM_PARAM_LANG_FRENCH:
+			sprintf(lang_id, "fr");
+			break;
+		case SCE_SYSTEM_PARAM_LANG_GERMAN:
+			sprintf(lang_id, "de");
+			break;
+		case SCE_SYSTEM_PARAM_LANG_ITALIAN:
+			sprintf(lang_id, "it");
+			break;
+		case SCE_SYSTEM_PARAM_LANG_SPANISH:
+			sprintf(lang_id, "es");
+			break;
+		case SCE_SYSTEM_PARAM_LANG_KOREAN:
+			sprintf(lang_id, "ko");
+			break;
+		case SCE_SYSTEM_PARAM_LANG_PORTUGUESE_BR:
+			sprintf(lang_id, "pt_BR");
+			break;
+		case SCE_SYSTEM_PARAM_LANG_PORTUGUESE_PT:
+			sprintf(lang_id, "pt");
+			break;
+		case SCE_SYSTEM_PARAM_LANG_RUSSIAN:
+			sprintf(lang_id, "ru");
+			break;
+		default:
+			sprintf(lang_id, "en");
+			break;
+		}
+		
+		return lang_id;
+	default:
+		if (methodID != UNKNOWN)
+			debugPrintf("CallStaticObjectMethodV(%d)\n", methodID);
+		return NULL;
+	}
 }
 
 enum {
@@ -1510,6 +1560,7 @@ int main(int argc, char *argv[]) {
 	*(uintptr_t *)(fake_env + 0x84) = (uintptr_t)GetMethodID;
 	*(uintptr_t *)(fake_env + 0x1C4) = (uintptr_t)GetStaticMethodID;
 	*(uintptr_t *)(fake_env + 0x238) = (uintptr_t)CallStaticVoidMethodV;
+	*(uintptr_t *)(fake_env + 0x1CC) = (uintptr_t)CallStaticObjectMethodV;
 	*(uintptr_t *)(fake_env + 0x1D8) = (uintptr_t)CallStaticBooleanMethodV;
 	*(uintptr_t *)(fake_env + 0x220) = (uintptr_t)CallStaticFloatMethodV;
 	*(uintptr_t *)(fake_env + 0x29C) = (uintptr_t)NewStringUTF;
