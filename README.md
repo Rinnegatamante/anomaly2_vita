@@ -12,6 +12,10 @@ This wrapper has been tested only with v.1.2.
 
 ## Changelog
 
+### v1.1
+
+- Added multilanguage support.
+
 ### v1.0
 
 - Initial release.
