@@ -57,6 +57,32 @@ unsigned int _oal_thread_affinity = 0x40000;
 
 so_module funky_mod;
 
+#define CONFIG_FILE_PATH "ux0:data/anomaly2/settings.cfg"
+
+int language = 0; // Language setting
+int graphics = 2; // Graphics Quality setting
+int controls = 0; // Controls Mode setting
+int antialiasing = 2; // Anti-Aliasing setting
+int framecap = 0; // Framecap setting
+
+void loadConfig(void) {
+	char buffer[30];
+	int value;
+
+	FILE *config = fopen(CONFIG_FILE_PATH, "r");
+
+	if (config) {
+		while (EOF != fscanf(config, "%[^ ] %d\n", buffer, &value)) {
+			if (strcmp("language", buffer) == 0) language = value;
+			else if (strcmp("graphics", buffer) == 0) graphics = value;
+			else if (strcmp("controls", buffer) == 0) controls = value;
+			else if (strcmp("antialiasing", buffer) == 0) antialiasing = value;
+			else if (strcmp("framecap", buffer) == 0) framecap = value;
+		}
+		fclose(config);
+	}
+}
+
 void *__wrap_memcpy(void *dest, const void *src, size_t n) {
 	return sceClibMemcpy(dest, src, n);
 }
@@ -495,8 +521,9 @@ void *SendRequestServer(const char *a1, int a2, int *res) {
 	return a1;
 }
 
-int GetScreenDensity() {
-	return 200;
+so_hook gfx_hook;
+int SetGFXQualityLevel(void *this, int level) {
+	return SO_CONTINUE(int, gfx_hook, this, graphics);
 }
 
 void patch_game(void) {
@@ -505,8 +532,9 @@ void patch_game(void) {
 	hook_addr((uintptr_t)funky_mod.text_base + 0x399114, (uintptr_t)_sync_synchronize);
 	hook_addr((uintptr_t)funky_mod.text_base + 0x399EF8, (uintptr_t)_sync_synchronize);
 	hook_addr((uintptr_t)funky_mod.text_base + 0x399EF0, (uintptr_t)_sync_synchronize);
-	hook_addr(so_symbol(&funky_mod, "_Z17GetScreenXDensityv"), (uintptr_t)GetScreenDensity);
-	hook_addr(so_symbol(&funky_mod, "_Z17GetScreenYDensityv"), (uintptr_t)GetScreenDensity);
+
+	gfx_hook = hook_addr(so_symbol(&funky_mod, "_ZN14LiquidRenderer20__SetGFXQualityLevelEj"), (uintptr_t)SetGFXQualityLevel);
+	
 
 	//hook_addr(so_symbol(&funky_mod, "_Z11OpenJetFilePKcPj"), (uintptr_t)OpenJetFile);
 	
@@ -682,7 +710,7 @@ void patch_game(void) {
 	hook_addr(so_symbol(&funky_mod, "_Z12SetGLContextv"), (uintptr_t)ret0);
 	hook_addr(so_symbol(&funky_mod, "_Z16PresentGLContextv"), (uintptr_t)PresentGLContext);
 
-	hook_addr(so_symbol(&funky_mod, "_ZN11GameConsole5PrintEhhPKcz"), (uintptr_t)ret0);
+	hook_addr(so_symbol(&funky_mod, "_ZN11GameConsole5PrintEhhPKcz"), (uintptr_t)GameConsolePrint);
 	hook_addr(so_symbol(&funky_mod, "_ZN11GameConsole12PrintWarningEhPKcz"), (uintptr_t)ret0);
 	hook_addr(so_symbol(&funky_mod, "_ZN11GameConsole10PrintErrorEhPKcz"), (uintptr_t)ret0);
 
@@ -774,22 +802,34 @@ void glShaderSource_hook(GLuint shader, GLsizei count, const GLchar **string, co
 	snprintf(cg_path, sizeof(cg_path), "app0:/shaders/%c%c/%s.cg.gxp", sha_name[0], sha_name[1], sha_name);
 
 	FILE *file = fopen(cg_path, "rb");
+	if (!file) {
+		snprintf(cg_path, sizeof(cg_path), "ux0:data/anomaly2/%s.cg.gxp", sha_name);
+		file = fopen(cg_path, "rb");
+		if (file) {
+			char dir_name[128];
+			sprintf(dir_name, "ux0:data/anomaly2/%c%c", sha_name[0], sha_name[1]);
+			sceIoMkdir(dir_name, 0777);
+			sprintf(dir_name, "ux0:data/anomaly2/%c%c/%s.cg.gxp", sha_name[0], sha_name[1], sha_name);
+			copy_file(cg_path, dir_name);
+		}
+	}
+	
 	//printf("Shader: %s\n", sha_name);
 	if (!file) {
-		char dir_name[128];
-		sprintf(dir_name, "ux0:data/anomaly2/%c%c", sha_name[0], sha_name[1]);
-		sceIoMkdir(dir_name, 0777);
+		//char dir_name[128];
+		//sprintf(dir_name, "ux0:data/anomaly2/%c%c", sha_name[0], sha_name[1]);
+		//sceIoMkdir(dir_name, 0777);
 		
-		snprintf(cg_path, sizeof(cg_path), "ux0:data/anomaly2/%c%c/%s.glsl", sha_name[0], sha_name[1], sha_name);
+		snprintf(cg_path, sizeof(cg_path), "ux0:data/anomaly2/%s.glsl", sha_name);
 		file = fopen(cg_path, "wb");
 		for (int i = 0; i < count; i++) {
 			fwrite(string[i], 1, strlen(string[i]), file);
 		}
 		fclose(file);
 		if (strstr(string[1], "gl_FragColor"))
-			file = fopen("app0:/shaders/f0/f039ad25982f2013426277d1d85c75f62a507850.cg.gxp", "rb");
+			file = fopen("app0:/shaders/3c/3cc8dc05e2acec8abf6359490609c072444a1e38.cg.gxp", "rb");
 		else
-			file = fopen("app0:/shaders/ca/ca7f578085d2b17c441e4e4843d8ce2b700a00ad.cg.gxp", "rb");
+			file = fopen("app0:/shaders/be/beaeefff0bfd14f36816060917c229b7b50d1e0f.cg.gxp", "rb");
 	} else {
 		/*char dst_name[128];
 		sprintf(dst_name, "ux0:data/anomaly2/%c%c/%s.cg.gxp", sha_name[0], sha_name[1], sha_name);
@@ -1262,7 +1302,7 @@ void CallStaticVoidMethodV(void *env, void *obj, int methodID, uintptr_t *args) 
 int CallStaticBooleanMethodV(void *env, void *obj, int methodID, uintptr_t *args) {
 	switch (methodID) {
 		case IS_JOYSTICK_PRESENT:
-			return 1;
+			return controls ? 0 : 1;
 		case IS_TOUCH_PRESENT:
 			return 1;
 		default:
@@ -1323,37 +1363,62 @@ void *CallStaticObjectMethodV(void *env, void *obj, int methodID, uintptr_t *arg
 	int lang = -1;
 	switch (methodID) {
 	case GET_SYSTEM_LANGUAGE:
-		sceAppUtilSystemParamGetInt(SCE_SYSTEM_PARAM_ID_LANG, &lang);
-		switch (lang) {
-		case SCE_SYSTEM_PARAM_LANG_JAPANESE:
-			sprintf(lang_id, "ja");
+		switch (language) {
+		case 0:
+			sceAppUtilSystemParamGetInt(SCE_SYSTEM_PARAM_ID_LANG, &lang);
+			switch (lang) {
+			case SCE_SYSTEM_PARAM_LANG_JAPANESE:
+				sprintf(lang_id, "ja");
+				break;
+			case SCE_SYSTEM_PARAM_LANG_FRENCH:
+				sprintf(lang_id, "fr");
+				break;
+			case SCE_SYSTEM_PARAM_LANG_GERMAN:
+				sprintf(lang_id, "de");
+				break;
+			case SCE_SYSTEM_PARAM_LANG_ITALIAN:
+				sprintf(lang_id, "it");
+				break;
+			case SCE_SYSTEM_PARAM_LANG_SPANISH:
+				sprintf(lang_id, "es");
+				break;
+			case SCE_SYSTEM_PARAM_LANG_KOREAN:
+				sprintf(lang_id, "ko");
+				break;
+			case SCE_SYSTEM_PARAM_LANG_PORTUGUESE_BR:
+				sprintf(lang_id, "pt_BR");
+				break;
+			case SCE_SYSTEM_PARAM_LANG_POLISH:
+				sprintf(lang_id, "pl");
+				break;
+			case SCE_SYSTEM_PARAM_LANG_PORTUGUESE_PT:
+				sprintf(lang_id, "pt");
+				break;
+			case SCE_SYSTEM_PARAM_LANG_RUSSIAN:
+				sprintf(lang_id, "ru");
+				break;
+			default:
+				sprintf(lang_id, "en");
+				break;
+			}
 			break;
-		case SCE_SYSTEM_PARAM_LANG_FRENCH:
+		case 1:
+			sprintf(lang_id, "en");
+			break;
+		case 2:
 			sprintf(lang_id, "fr");
 			break;
-		case SCE_SYSTEM_PARAM_LANG_GERMAN:
+		case 3:
 			sprintf(lang_id, "de");
 			break;
-		case SCE_SYSTEM_PARAM_LANG_ITALIAN:
-			sprintf(lang_id, "it");
-			break;
-		case SCE_SYSTEM_PARAM_LANG_SPANISH:
+		case 4:
 			sprintf(lang_id, "es");
 			break;
-		case SCE_SYSTEM_PARAM_LANG_KOREAN:
-			sprintf(lang_id, "ko");
+		case 5:
+			sprintf(lang_id, "pl");
 			break;
-		case SCE_SYSTEM_PARAM_LANG_PORTUGUESE_BR:
-			sprintf(lang_id, "pt_BR");
-			break;
-		case SCE_SYSTEM_PARAM_LANG_PORTUGUESE_PT:
-			sprintf(lang_id, "pt");
-			break;
-		case SCE_SYSTEM_PARAM_LANG_RUSSIAN:
+		case 6:
 			sprintf(lang_id, "ru");
-			break;
-		default:
-			sprintf(lang_id, "en");
 			break;
 		}
 		
@@ -1403,8 +1468,9 @@ void *ctrl_thread(void *argp) {
 	int (* Java_com_android_Game11Bits_GameLib_enableJoystick)(void *env, void *obj, int enabled) = (void *)so_symbol(&funky_mod, "Java_com_android_Game11Bits_GameLib_enableJoystick");
 	int (* Java_com_android_Game11Bits_GameLib_joystickEvent)(void *env, void *obj, float axisX, float axisY, float axisZ, float axisRZ, float axisHatX, float axisHatY, float axisLtrigger, float axisRtrigger) = (void *)so_symbol(&funky_mod, "Java_com_android_Game11Bits_GameLib_joystickEvent");
 	int (* Java_com_android_Game11Bits_GameLib_keyEvent)(void *env, void *obj, int keycode, int down) = (void *)so_symbol(&funky_mod, "Java_com_android_Game11Bits_GameLib_keyEvent");
-
-	Java_com_android_Game11Bits_GameLib_enableJoystick(fake_env, NULL, 1);
+	
+	if (!controls)
+		Java_com_android_Game11Bits_GameLib_enableJoystick(fake_env, NULL, 1);
 
 	float lastLx = 0.0f, lastLy = 0.0f, lastRx = 0.0f, lastRy = 0.0f;
 	int lastUp = 0, lastDown = 0, lastLeft = 0, lastRight = 0, lastL = 0, lastR = 0;
@@ -1480,7 +1546,7 @@ void *ctrl_thread(void *argp) {
 			float hat_x = currUp ? 1.0f : 0.0f;
 			Java_com_android_Game11Bits_GameLib_joystickEvent(fake_env, NULL, currLx, currLy, currRx, currRy, hat_x, hat_y, (float)lastL, (float)lastR);
 		}
-
+		
 		sceKernelDelayThread(1000);
 	}
 
@@ -1501,6 +1567,9 @@ int main(int argc, char *argv[]) {
 	scePowerSetBusClockFrequency(222);
 	scePowerSetGpuClockFrequency(222);
 	scePowerSetGpuXbarClockFrequency(166);
+	
+	loadConfig();
+	eglSwapBuffers(0, framecap ? 2 : 1);
 
 	pstv_mode = sceCtrlIsMultiControllerSupported() ? 1 : 0;
 
@@ -1523,8 +1592,18 @@ int main(int argc, char *argv[]) {
 
 	vglSetupRuntimeShaderCompiler(SHARK_OPT_UNSAFE, SHARK_ENABLE, SHARK_ENABLE, SHARK_ENABLE);
 	vglSetupGarbageCollector(127, 0x20000);
-	vglInitExtended(0, SCREEN_W, SCREEN_H, MEMORY_VITAGL_THRESHOLD_MB * 1024 * 1024, SCE_GXM_MULTISAMPLE_4X);
-
+	switch (antialiasing) {
+	case 0:
+		vglInitExtended(0, SCREEN_W, SCREEN_H, MEMORY_VITAGL_THRESHOLD_MB * 1024 * 1024, SCE_GXM_MULTISAMPLE_NONE);
+		break;
+	case 1:
+		vglInitExtended(0, SCREEN_W, SCREEN_H, MEMORY_VITAGL_THRESHOLD_MB * 1024 * 1024, SCE_GXM_MULTISAMPLE_2X);
+		break;
+	default:
+		vglInitExtended(0, SCREEN_W, SCREEN_H, MEMORY_VITAGL_THRESHOLD_MB * 1024 * 1024, SCE_GXM_MULTISAMPLE_4X);
+		break;
+	}
+	
 	// Playing the intro video if present)
 	/*SceIoStat st1;
 	if (sceIoGetstat("ux0:data/anomaly/assets/start.mp4", &st1) >= 0) {
