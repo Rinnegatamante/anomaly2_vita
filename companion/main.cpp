@@ -27,6 +27,7 @@ int language = 0; // Language setting
 int graphics = 2; // Graphics Quality setting
 int controls = 0; // Controls Mode setting
 int antialiasing = 2; // Anti-Aliasing setting
+int tex_quality = 1; // Texture Quality setting
 bool framecap = false; // Framecap setting
 
 void loadConfig(void) {
@@ -42,6 +43,7 @@ void loadConfig(void) {
 			else if (strcmp("controls", buffer) == 0) controls = value;
 			else if (strcmp("antialiasing", buffer) == 0) antialiasing = value;
 			else if (strcmp("framecap", buffer) == 0) framecap = (bool)value;
+			else if (strcmp("texture", buffer) == 0) tex_quality = value;
 		}
 		fclose(config);
 	}
@@ -56,6 +58,7 @@ void saveConfig(void) {
 		fprintf(config, "%s %d\n", "controls", controls);
 		fprintf(config, "%s %d\n", "antialiasing", antialiasing);
 		fprintf(config, "%s %d\n", "framecap", (int)framecap);
+		fprintf(config, "%s %d\n", "tex_quality", tex_quality);
 		fclose(config);
 	}
 }
@@ -69,6 +72,14 @@ char *graphics_settings[] = {
 };
 
 GLuint graphics_presets[5];
+
+char *texture_settings[] = {
+	"Low",
+	"Medium",
+	"High"
+};
+
+GLuint texture_presets[3];
 
 char *controls_settings[] = {
 	"Physical Controls",
@@ -95,6 +106,7 @@ GLuint antialiasing_presets[3];
 
 char *options_descs[] = {
 	"Game internal graphics quality. Increasing this value will make the game look better at the cost of framerate.\nThe default value is: Medium.", // graphics
+	"Textures quality. Increasing this value will make the game look better at the cost of framerate.\nThe default value is: Medium.", // tex_quality
 	"Technique used to reduce aliasing surrounding 3D models. Greatly improves graphics quality at the cost of some GPU power.\nThe default value is: MSAA 4x.", // antialiasing
 	"Enable a framecap to 30 fps.\nThe default value is: Off.", // framecap
 	"Controls scheme to use in game.\nThe default value is: Physical Controls.", // controls
@@ -103,6 +115,7 @@ char *options_descs[] = {
 
 enum {
 	OPT_GRAPHICS_QUALITY,
+	OPT_TEXTURES_QUALITY,
 	OPT_ANTIALIASING,
 	OPT_FRAMECAP,
 	OPT_CONTROLS_SCHEME,
@@ -135,6 +148,7 @@ int main(int argc, char *argv[]) {
 	
 	glGenTextures(5, graphics_presets);
 	glGenTextures(3, antialiasing_presets);
+	glGenTextures(3, texture_presets);
 	int w, h;
 	uint8_t *buf = stbi_load("app0:presets/lowest.png", &w, &h, NULL, 4);
 	uploadTexture(graphics_presets[0], buf, w, h);
@@ -160,14 +174,25 @@ int main(int argc, char *argv[]) {
 	buf = stbi_load("app0:antialiasing/4x.png", &w, &h, NULL, 4);
 	uploadTexture(antialiasing_presets[2], buf, w, h);
 	free(buf);
+	buf = stbi_load("app0:textures/low.png", &w, &h, NULL, 4);
+	uploadTexture(texture_presets[0], buf, w, h);
+	free(buf);
+	buf = stbi_load("app0:textures/medium.png", &w, &h, NULL, 4);
+	uploadTexture(texture_presets[1], buf, w, h);
+	free(buf);
+	buf = stbi_load("app0:textures/high.png", &w, &h, NULL, 4);
+	uploadTexture(texture_presets[2], buf, w, h);
+	free(buf);
 	
 	ImGui::GetIO().MouseDrawCursor = false;
 	
 	while (exit_code == 0xDEAD) {
 		bool show_presets = false;
 		bool show_anti = false;
+		bool show_textures = false;
 		int anti = antialiasing;
 		int preset = graphics;
+		int tex_preset = tex_quality;
 		desc = nullptr;
 		ImGui_ImplVitaGL_NewFrame();
 
@@ -199,6 +224,27 @@ int main(int argc, char *argv[]) {
 		if (ImGui::IsItemHovered()) {
 			show_presets = true;
 			desc = options_descs[OPT_GRAPHICS_QUALITY];
+		}
+		
+		ImGui::Text("Textures Quality:"); ImGui::SameLine();
+		if (ImGui::BeginCombo("##combo5", texture_settings[tex_quality])) {
+			for (int n = 0; n < sizeof(texture_settings)/sizeof(*texture_settings); n++) {
+				bool is_selected = tex_quality == n;
+				if (ImGui::Selectable(texture_settings[n], is_selected))
+					tex_quality = n;
+				if (ImGui::IsItemHovered()) {
+					show_textures = true;
+					tex_preset = n;
+					desc = options_descs[OPT_TEXTURES_QUALITY];
+				}
+				if (is_selected)
+					ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+		if (ImGui::IsItemHovered()) {
+			show_textures = true;
+			desc = options_descs[OPT_TEXTURES_QUALITY];
 		}
 		
 		ImGui::Text("Anti-Aliasing:"); ImGui::SameLine();
@@ -290,6 +336,11 @@ int main(int argc, char *argv[]) {
 			float w = ImGui::GetContentRegionAvail().x;
 			ImGui::SetCursorPosX((w - 545.0f) / 2.0f);
 			ImGui::Image((void*)antialiasing_presets[anti], ImVec2(545.0f, 324.0f));
+		}
+		if (show_textures) {
+			float w = ImGui::GetContentRegionAvail().x;
+			ImGui::SetCursorPosX((w - 573.52941f) / 2.0f);
+			ImGui::Image((void*)texture_presets[tex_preset], ImVec2(573.52941f, 325.0f));
 		}
 
 		ImGui::End();

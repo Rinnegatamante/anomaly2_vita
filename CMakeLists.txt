@@ -95,5 +95,6 @@ vita_create_vpk(anomaly.vpk ${VITA_TITLEID} eboot.bin
        ${CMAKE_SOURCE_DIR}/compiled_shaders shaders
 	   ${CMAKE_SOURCE_DIR}/presets presets
 	   ${CMAKE_SOURCE_DIR}/antialiasing antialiasing
+	   ${CMAKE_SOURCE_DIR}/textures textures
 	   ${CMAKE_BINARY_DIR}/companion.bin companion.bin
 )

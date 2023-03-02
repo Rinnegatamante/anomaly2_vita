@@ -64,6 +64,7 @@ int graphics = 2; // Graphics Quality setting
 int controls = 0; // Controls Mode setting
 int antialiasing = 2; // Anti-Aliasing setting
 int framecap = 0; // Framecap setting
+int tex_quality = 1; // Texture Quality setting
 
 void loadConfig(void) {
 	char buffer[30];
@@ -78,6 +79,7 @@ void loadConfig(void) {
 			else if (strcmp("controls", buffer) == 0) controls = value;
 			else if (strcmp("antialiasing", buffer) == 0) antialiasing = value;
 			else if (strcmp("framecap", buffer) == 0) framecap = value;
+			else if (strcmp("tex_quality", buffer) == 0) tex_quality = value;
 		}
 		fclose(config);
 	}
@@ -378,8 +380,9 @@ int sem_destroy_fake(int *uid) {
 
 static int *TotalMemeorySizeInMB = NULL;
 
+int mem_steps[] = {256, 768, 1024};
 void DeteremineSystemMemory(void) {
-	*TotalMemeorySizeInMB = 1024 * 1024; // Faking 1 GB report to get highest texture quality
+	*TotalMemeorySizeInMB = mem_steps[tex_quality];
 }
 
 int FileSystem__IsAbsolutePath(void *this, const char *path) {
@@ -498,7 +501,7 @@ FILE *OpenJetFile(char *fname, char *mode) {
 }
 
 int GameConsolePrint(void *this, int a1, int a2, char *text, ...) {
-#ifdef ENABLE_DEBUG
+//#ifdef ENABLE_DEBUG
 	va_list list;
 	static char string[0x8000];
 
@@ -507,7 +510,7 @@ int GameConsolePrint(void *this, int a1, int a2, char *text, ...) {
 	va_end(list);
 
 	printf("GameConsolePrint: %s\n", string);
-#endif
+//#endif
 	return 0;
 }
 
