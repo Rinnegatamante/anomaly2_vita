@@ -501,7 +501,7 @@ FILE *OpenJetFile(char *fname, char *mode) {
 }
 
 int GameConsolePrint(void *this, int a1, int a2, char *text, ...) {
-//#ifdef ENABLE_DEBUG
+#ifdef ENABLE_DEBUG
 	va_list list;
 	static char string[0x8000];
 
@@ -510,7 +510,7 @@ int GameConsolePrint(void *this, int a1, int a2, char *text, ...) {
 	va_end(list);
 
 	printf("GameConsolePrint: %s\n", string);
-//#endif
+#endif
 	return 0;
 }
 

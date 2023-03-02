@@ -89,3 +89,4 @@ cmake .. && make
 
 - CatoTheYounger for the screenshots and for testing the homebrew.
 - gl33ntwine for helping dealing with partial automatization of shaders translation.
+- Once13one for the Livearea assets.
