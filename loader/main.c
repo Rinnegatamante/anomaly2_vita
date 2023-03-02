@@ -96,7 +96,7 @@ void *__wrap_memset(void *s, int c, size_t n) {
 }
 
 int debugPrintf(char *text, ...) {
-#ifdef DEBUG
+#ifdef ENABLE_DEBUG
 	va_list list;
 	static char string[0x8000];
 
@@ -110,7 +110,7 @@ int debugPrintf(char *text, ...) {
 }
 
 int __android_log_print(int prio, const char *tag, const char *fmt, ...) {
-#ifdef DEBUG
+#ifdef ENABLE_DEBUG
 	va_list list;
 	static char string[0x8000];
 
@@ -124,7 +124,7 @@ int __android_log_print(int prio, const char *tag, const char *fmt, ...) {
 }
 
 int __android_log_write(int prio, const char *tag, const char *text) {
-#ifdef DEBUG
+#ifdef ENABLE_DEBUG
 	 printf("[LOG] %s: %s\n", tag, text);
 #endif
 	return 0;
@@ -379,7 +379,7 @@ int sem_destroy_fake(int *uid) {
 static int *TotalMemeorySizeInMB = NULL;
 
 void DeteremineSystemMemory(void) {
-	*TotalMemeorySizeInMB = MEMORY_NEWLIB_MB;
+	*TotalMemeorySizeInMB = 1024 * 1024; // Faking 1 GB report to get highest texture quality
 }
 
 int FileSystem__IsAbsolutePath(void *this, const char *path) {
@@ -498,7 +498,7 @@ FILE *OpenJetFile(char *fname, char *mode) {
 }
 
 int GameConsolePrint(void *this, int a1, int a2, char *text, ...) {
-	//#ifdef DEBUG
+#ifdef ENABLE_DEBUG
 	va_list list;
 	static char string[0x8000];
 
@@ -507,7 +507,7 @@ int GameConsolePrint(void *this, int a1, int a2, char *text, ...) {
 	va_end(list);
 
 	printf("GameConsolePrint: %s\n", string);
-//#endif
+#endif
 	return 0;
 }
 
