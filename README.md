@@ -12,6 +12,16 @@ This wrapper has been tested only with v.1.2.
 
 ## Changelog
 
+### v1.2
+
+- Added configurator app.
+- Made possible to change Graphics Quality.
+- Made possible to change Textures Quality.
+- Added optional 30 fps cap.
+- Made possible to overload language setting.
+- Disabled logs (Slight performance improvements).
+- Reworked Livearea assets (Thanks to Once13one).
+
 ### v1.1
 
 - Added multilanguage support.
