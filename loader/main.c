@@ -1584,7 +1584,7 @@ int main(int argc, char *argv[]) {
 	scePowerSetGpuXbarClockFrequency(166);
 	
 	loadConfig();
-	eglSwapBuffers(0, framecap ? 2 : 1);
+	eglSwapInterval(0, framecap ? 2 : 1);
 
 	pstv_mode = sceCtrlIsMultiControllerSupported() ? 1 : 0;
 
